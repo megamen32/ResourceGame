@@ -7,9 +7,9 @@ class Agent:
         self.x = x
         self.y = y
 
-        self.max_health=3.0
-        self.health = self.max_health  # Здоровье
-        self.attack_radius=5
+        self.max_health=10.0
+        self.health =1  # Здоровье
+        self.attack_radius=10
         self.max_resources=10
         self.resources = self.max_resources  # Начальное количество ресурсов (яблоко)
         ###cache
@@ -31,8 +31,8 @@ class Agent:
             self.y += dy
             moved=True
         if moved:
-            self.resources -= abs(dx) / 50  # Расход ресурсов за движение
-            self.resources -= abs(dy) / 50
+            self.resources -= abs(dx) / 500  # Расход ресурсов за движение
+            self.resources -= abs(dy) / 500
         else:
             self.resources -= self.env.starvation
 

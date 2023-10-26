@@ -21,12 +21,12 @@ class GoldenRuleEnv(gym.Env):
     def __init__(self, world_size=500, vision_radius=50,render_mode='human'):
         super(GoldenRuleEnv, self).__init__()
 
-        self.starvation = 0.005
+        self.starvation = 0.0005
         self.world_size = world_size  # Размер мира
         self.vision_radius = vision_radius  # Радиус видимости агента
         self.agents = []  # Список агентов
         self.resources = []  # Список ресурсов
-        self.spawn_rate=0.1
+        self.spawn_rate=0.001
         self.init_agents=10
         self.init_resourses=20
 
@@ -45,7 +45,7 @@ class GoldenRuleEnv(gym.Env):
     def reset(self,seed=None,options=None):
         # Сброс среды
         self.agents = [Agent(random.randint(0, self.world_size), random.randint(0, self.world_size),env=self) for _ in range(self.init_agents)]  # Примерное количество агентов
-        self.resources = [Resource(random.randint(0, self.world_size), random.randint(0, self.world_size)) for _ in range(self.init_resourses)]  # Примерное количество ресурсов
+        self.resources = [Resource(random.randint(0, self.world_size), random.randint(0, self.world_size),random.randint(1, 5)) for _ in range(self.init_resourses)]  # Примерное количество ресурсов
         return self._get_observation(),{}
 
     def _get_observation(self):
@@ -103,6 +103,8 @@ class GoldenRuleEnv(gym.Env):
         for i, agent in enumerate(self.agents):
             action = actions[i]
             dx, dy, attack,eat = action  # Разбираем действие на компоненты
+            dx = dx - 1  # Переводим [0, 1, 2] в [-1, 0, 1]
+            dy = dy - 1  # То же самое
             attack=attack==1
             eat=eat==1
             # Двигаем агента
@@ -148,11 +150,11 @@ class GoldenRuleEnv(gym.Env):
 
        # Отображение ресурсов (яблок) зелеными кругами
        for res in self.resources:
-           pygame.draw.circle(self.screen, (0, 255, 0), (res.x, res.y), 2)
+           pygame.draw.circle(self.screen, (0, 255, 0), (res.x, res.y), 2*res.amount)
 
        # Отображение агентов красными кругами
-       for agent in self.agents:
-           pygame.draw.circle(self.screen, (max(0,255*agent.resources/agent.max_resources), 0, 0), (agent.x, agent.y), agent.health)
+       for i,agent in enumerate(self.agents):
+           pygame.draw.circle(self.screen, (max(0,255*agent.resources/agent.max_resources), 0, 0 if i!=0 else 255 ), (agent.x, agent.y), agent.health)
 
        pygame.event.pump()
        pygame.display.flip()  # Обновление экрана
@@ -193,7 +195,7 @@ class GoldenRuleEnv(gym.Env):
             reward-=2
         agent.prev_health=agent.prev_health
         if agent.health==0:
-            reward-=10
+            reward-=100
         if agent.resources==0:
             reward-=0.5
         return reward

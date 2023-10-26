@@ -42,14 +42,15 @@ def handle_human_input(env, active_keys):
 
 def action_from_input(input_str):
     action_map = {
-        "MOVE_LEFT": (-1, 0, 0, 0),
-        "MOVE_RIGHT": (1, 0, 0, 0),
-        "MOVE_UP": (0, -1, 0, 0),
-        "MOVE_DOWN": (0, 1, 0, 0),
-        "ATTACK": (0, 0, 1, 0),
-        "EAT": (0, 0, 0, 1)
+        "MOVE_LEFT": (0, 1, 0, 0),  # -1 становится 0
+        "MOVE_RIGHT": (2, 1, 0, 0),  # 1 становится 2
+        "MOVE_UP": (1, 0, 0, 0),  # -1 становится 0
+        "MOVE_DOWN": (1, 2, 0, 0),  # 1 становится 2
+        "ATTACK": (1, 1, 1, 0),
+        "EAT": (1, 1, 0, 1)
     }
-    return list(action_map.get(input_str, (0, 0, 0, 0)))
+
+    return list(action_map.get(input_str, (1, 1, 0, 0)))
 
 env = SingleAgentWrapper(gymnasium.make('GoldenRuleEnv'))
 observation,_ = env.reset()
@@ -71,7 +72,7 @@ while True:
     cum_reward+=reward
     env.render()
     if step%50==0:
-        print('cummulitive_reward',cum_reward,'reward',reward,'state\n',observation)
+        print('cummulitive_reward',cum_reward,'reward',reward,'state\n',env.agents[0].get_visible_state())
     if done or truncated:
         env.reset()
         cum_reward = 0

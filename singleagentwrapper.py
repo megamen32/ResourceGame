@@ -12,7 +12,7 @@ class SingleAgentWrapper(gym.Wrapper):
         return obs[0],_  # Возвращаем наблюдение для одного агента
 
     def step(self, action):
-        nulls_actions = [np.random.randint(-1, 2, 4) for _ in range(len(self.agents) - 1)]
+        nulls_actions = [np.random.randint(0, 3, 4) for _ in range(len(self.agents) - 1)]
         actions = [action] + nulls_actions  # Действие для одного агента, остальные не активны
         obs, reward, done, truncated,info = self.env.step(actions)
         return obs[0], reward[0], done, truncated,info
