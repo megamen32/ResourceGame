@@ -187,7 +187,7 @@ class GoldenRuleEnv(gym.Env):
         if agent.prev_resources < agent.resources:
             reward += 1
         elif agent.prev_resources > agent.resources:
-            reward-=agent.resources-agent.prev_resources
+            reward-=agent.prev_resources-agent.resources
         agent.prev_resources=agent.resources
         if agent.health<agent.prev_health:
             reward-=2

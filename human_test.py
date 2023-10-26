@@ -2,6 +2,8 @@ import gymnasium
 import numpy as np
 import pygame
 import goldenruleenv
+from singleagentwrapper import SingleAgentWrapper
+
 
 def handle_human_input(env, active_keys):
     # Обработка действий пользователя
@@ -49,7 +51,7 @@ def action_from_input(input_str):
     }
     return list(action_map.get(input_str, (0, 0, 0, 0)))
 
-env = gymnasium.make('GoldenRuleEnv')
+env = SingleAgentWrapper(gymnasium.make('GoldenRuleEnv'))
 observation,_ = env.reset()
 human_input = None
 active_keys = set()
@@ -63,13 +65,13 @@ while True:
 
 
     action = action_from_input(new_human_input)
-    nulls_actions = [np.random.randint(-1,2,4) for _ in range(env.init_agents-1)]
-    actions = [action, *nulls_actions]
-    observation, reward, done, truncated, info = env.step(actions)
-    cum_reward+=reward[0]
+
+
+    observation, reward, done, truncated, info = env.step(action)
+    cum_reward+=reward
     env.render()
     if step%50==0:
-        print('cummulitive_reward',cum_reward,'reward',reward[0],'state\n',observation[0])
+        print('cummulitive_reward',cum_reward,'reward',reward,'state\n',observation)
     if done or truncated:
         env.reset()
         cum_reward = 0
