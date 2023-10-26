@@ -1,4 +1,6 @@
 # Определение класса агента
+import random
+
 from resources import Resource
 
 
@@ -15,11 +17,18 @@ class Agent:
         ###cache
         from goldenruleenv import GoldenRuleEnv
         self.env:GoldenRuleEnv=env
+        self.is_attacking = False
+        self.attack_idle=0
+        self.time_between_attacks=5
         ###cache for states
         self.prev_health=self.health
         self.prev_resources=self.resources
+        self.previous_food_distance= float('inf')
+        self.normal_health=random.uniform(0.2,1)
 
-    # Метод для движения агента
+
+
+        # Метод для движения агента
     def move(self, dx, dy):
         moved=False
         if self.resources<=0:
@@ -39,9 +48,25 @@ class Agent:
     # Метод для атаки другого агента
     def attack(self, other):
         other.health -= 1
+
         # Если здоровье другого агента становится <= 0, забираем его ресурсы
         if other.health <= 0:
             self.env.resources.append(Resource(other.x,other.y, other.resources ))
     def get_visible_state(agent):
         return [agent.x, agent.y, agent.health]
+
+
+class AttackAnimation:
+    def __init__(self, x, y,max_radius=10):
+        self.x = x
+        self.y = y
+        self.frame = 0
+        self.max_radius=max_radius
+        self.animation_time=10
+
+    def update(self):
+        self.frame += 1
+
+    def is_finished(self):
+        return self.frame >= self.animation_time
 

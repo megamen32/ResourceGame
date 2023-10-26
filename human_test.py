@@ -71,6 +71,7 @@ while True:
     observation, reward, done, truncated, info = env.step(action)
     cum_reward+=reward
     env.render()
+    pygame.time.wait(50)
     if step%50==0:
         print('cummulitive_reward',cum_reward,'reward',reward,'state\n',env.agents[0].get_visible_state())
     if done or truncated:

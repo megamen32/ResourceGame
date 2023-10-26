@@ -1,3 +1,5 @@
+import math
+
 import gymnasium
 import gymnasium as gym
 import numpy
@@ -8,7 +10,7 @@ import random
 
 from gymnasium.spaces import MultiDiscrete
 
-from agent import Agent
+from agent import Agent, AttackAnimation
 from resources import Resource
 
 
@@ -18,10 +20,10 @@ from resources import Resource
 
 # Основной класс среды
 class GoldenRuleEnv(gym.Env):
-    def __init__(self, world_size=500, vision_radius=50,render_mode='human'):
+    def __init__(self, world_size=500, vision_radius=200,render_mode='human'):
         super(GoldenRuleEnv, self).__init__()
 
-        self.starvation = 0.0005
+        self.starvation = 1/500/2
         self.world_size = world_size  # Размер мира
         self.vision_radius = vision_radius  # Радиус видимости агента
         self.agents = []  # Список агентов
@@ -34,7 +36,7 @@ class GoldenRuleEnv(gym.Env):
         self.action_space = MultiDiscrete([3, 3, 2, 2])
 
         # Пространство наблюдений: пока что просто координаты всех агентов и ресурсов в радиусе видимости
-        self.observation_space = spaces.Box(low=0, high=self.world_size, shape=(32, ), dtype=np.float32)
+        self.observation_space = spaces.Box(low=-self.world_size, high=self.world_size, shape=(32, ), dtype=np.float64)
         self.reset()
         #if render_mode=='human':
         pygame.init()
@@ -46,6 +48,8 @@ class GoldenRuleEnv(gym.Env):
         # Сброс среды
         self.agents = [Agent(random.randint(0, self.world_size), random.randint(0, self.world_size),env=self) for _ in range(self.init_agents)]  # Примерное количество агентов
         self.resources = [Resource(random.randint(0, self.world_size), random.randint(0, self.world_size),random.randint(1, 5)) for _ in range(self.init_resourses)]  # Примерное количество ресурсов
+        self.attack_animations = []
+
         return self._get_observation(),{}
 
     def _get_observation(self):
@@ -101,8 +105,11 @@ class GoldenRuleEnv(gym.Env):
         rewards = []
 
         # Для каждого агента
-        dones=[False for _ in range(len(self.agents))]
-        truncate=[False for _ in range(len(self.agents))]
+        dones=[False for _ in range((self.init_agents))]
+        truncate=[False for _ in range((self.init_agents))]
+        if not self.agents:
+            dones= [True for _ in range((self.init_agents))]
+
         for i, agent in enumerate(self.agents):
             action = actions[i]
             dx, dy, attack,eat = action  # Разбираем действие на компоненты
@@ -125,7 +132,11 @@ class GoldenRuleEnv(gym.Env):
                 agent.health+=1
 
             # Если агент решил атаковать
-            if attack:
+            #agent.is_attacking=False
+            agent.attack_idle-=1
+            if attack and agent.attack_idle<=0:
+                agent.is_attacking = True
+                agent.attack_idle=agent.time_between_attacks
                 agent.resources -= 1/2
                 # Найдем ближайшего агента в радиусе атаки и атакуем его
                 target = self._find_nearest_agent(agent)
@@ -145,10 +156,17 @@ class GoldenRuleEnv(gym.Env):
         self._update_world()
 
         observations = self._get_observation()
-        done = len(self.agents)<=1  # условие завершения эпизода
-        trunctated=max(agent.resources for agent in self.agents)<=0
+        #done = len(self.agents)<=1  # условие завершения эпизода
+        #trunctated=max(agent.resources for agent in self.agents)<=0
         info = {}  # дополнительная информация
         self.render()
+        if  len(rewards)==0  or len(observations)==0 :
+            dones = [True for _ in range((self.init_agents))]
+            truncate = [False for _ in range((self.init_agents))]
+            observations = [[0 for i in range(self.observation_space.shape[0])] for _ in range((self.init_agents))]
+            rewards = [0 for _ in range((self.init_agents))]
+        if len(self.agents)==1:
+            dones = [True for _ in range((self.init_agents))]
         return observations, rewards, dones,truncate, info
 
 
@@ -161,13 +179,26 @@ class GoldenRuleEnv(gym.Env):
 
        # Отображение агентов красными кругами
        for i, agent in enumerate(self.agents):
-            color = (max(0, 255 * agent.resources / agent.max_resources), 0, 0 if i != 0 else 255)
+            i1 = max(0, 255 * agent.resources / agent.max_resources)
+            color = (i1, 0, 0 if i != 0 else i1)
             if i == 0:
                 # Рисуем квадрат для нулевого агента
-                size = min(10 * agent.health,agent.max_health)
-                pygame.draw.rect(self.screen, color, (agent.x - size // 2, agent.y - size // 2, size, size))
+                size = math.log2(max(1,min( agent.health*4,agent.max_health*4)))*2
+                pygame.draw.rect(self.screen, color, (agent.x - size , agent.y - size, size*2, size*2))
             else:
                 pygame.draw.circle(self.screen, color, (agent.x, agent.y), agent.health)
+
+            if agent.is_attacking:
+                self.attack_animations.append(AttackAnimation(agent.x, agent.y,agent.attack_radius))
+                agent.is_attacking=False
+
+        # Отображаем и обновляем атакующие анимации
+       for animation in self.attack_animations:
+            attack_ring_radius = (animation.frame / animation.animation_time) * animation.max_radius
+            pygame.draw.circle(self.screen, (255, 0, 0), (animation.x, animation.y), int(attack_ring_radius), 2)
+            animation.update()
+            if animation.is_finished():
+                self.attack_animations.remove(animation)
 
        pygame.event.pump()
        pygame.display.flip()  # Обновление экрана
@@ -196,21 +227,47 @@ class GoldenRuleEnv(gym.Env):
             return nearest_food
 
     def _compute_reward(self, agent):
+
         # Награда или штраф на основе действий и состояния агента
-        # Пример:
         reward = 0
+
+        # Расстояние до ближайшего ресурса
+        def distance_to_nearest_resource(agent):
+            if not self.resources:  # Если нет ресурсов
+                return float('inf')
+            distances = [np.linalg.norm(np.array([agent.x, agent.y]) - np.array([resource.x, resource.y])) for resource in
+                         self.resources]
+            return min(distances)
+
+        previous_distance = agent.previous_food_distance
+
+        # После действия агента обновите его состояние и найдите новое расстояние
+        # (Вызовите эту функцию после действия агента в вашем главном цикле)
+        new_distance = distance_to_nearest_resource(agent)
+
+
+        agent.previous_food_distance=new_distance
         if agent.prev_resources < agent.resources:
-            reward += 1
-        elif agent.prev_resources+0.5 > agent.resources:
-            reward-=(agent.prev_resources-agent.resources)*2
-        agent.prev_resources=agent.resources
-        if agent.health<agent.prev_health:
-            reward-=2
-        agent.prev_health=agent.prev_health
-        if agent.health<=0:
-            reward-=100
-        if agent.resources<=0:
-            reward-=100
+            reward += 5*(agent.resources- agent.prev_resources)
+        elif agent.prev_resources > agent.resources:
+            reward -= (agent.prev_resources - agent.resources) * 2
+            if new_distance < previous_distance:
+                reward += 0.2  # Награда за приближение к ресурсу
+            else:
+                reward-=0.3
+
+        agent.prev_resources = agent.resources
+
+        if agent.health < agent.prev_health:
+            reward -= 2
+
+        agent.prev_health = agent.prev_health
+
+        if agent.health <= 0:
+            reward -= 100
+        if agent.resources <= 0:
+            reward -= 100
+
         return reward
 
     def _update_world(self):

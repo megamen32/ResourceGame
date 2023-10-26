@@ -1,5 +1,6 @@
 import os.path
 import gymnasium
+import pygame.time
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import CheckpointCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv
@@ -20,7 +21,7 @@ def load_latest_checkpoint(model_name, env):
     Загрузите последний чекпоинт или сохраненную модель, в зависимости от того, какой из них новее.
     Если не найдено ни одного, создайте новую модель.
     """
-    list_of_files = glob.glob('./checkpoints/*.zip')
+    list_of_files = glob.glob(f'./checkpoints/rl_model{policy_kwargs}.zip')
     model_path = f'{model_name}.zip'
     model_path_exit = f'{model_name}_exit_save.zip'
 
@@ -30,7 +31,7 @@ def load_latest_checkpoint(model_name, env):
 
     if not all_files:  # Если нет ни чекпоинтов, ни сохраненной модели
         print('Creating new model', model_path)
-        return PPO("MlpPolicy", env, verbose=1, policy_kwargs=policy_kwargs)
+        return PPO("MlpPolicy", env, verbose=2, policy_kwargs=policy_kwargs)
 
     # Выберем самый новый файл
     latest_file = max(all_files, key=os.path.getctime)
@@ -48,28 +49,41 @@ def make_env():
 
 # Настройка архитектуры сети
 policy_kwargs = dict(
-    net_arch=[256, 256,256]  # два скрытых слоя по 64 нейронов
+    net_arch=[32,32]  # два скрытых слоя по 64 нейронов
 )
 
 PATH = f'basic_ppo_{policy_kwargs["net_arch"]}'
-
+Train=True
 if __name__ == '__main__':
-    env = SubprocVecEnv([make_env() for _ in range(num_cpu)])
+    env = SubprocVecEnv([make_env() for _ in range(num_cpu)]) if Train else SingleAgentWrapper(
+        gymnasium.make('GoldenRuleEnv'))
     model = load_latest_checkpoint(PATH, env)
-    # Сохраняется каждые 10 минут
-    save_freq =10000  # Предположим, что каждый шаг занимает 2 секунды на одном ядре
+    if Train:
+        # Сохраняется каждые 10 минут
+        save_freq =10000  # Предположим, что каждый шаг занимает 2 секунды на одном ядре
 
-    checkpoint_callback = CheckpointCallback(save_freq=save_freq, save_path='./checkpoints/', name_prefix=f'rl_model{policy_kwargs["net_arch"]}')
+        checkpoint_callback = CheckpointCallback(save_freq=save_freq, save_path='./checkpoints/', name_prefix=f'rl_model{policy_kwargs["net_arch"]}')
 
 
-    def save_on_exit():
-        print("Saving model before exiting...", PATH)
+        def save_on_exit():
+            print("Saving model before exiting...", PATH)
+            model.save('%s' % PATH)
+
+
+        atexit.register(save_on_exit)
+
+        model.learn(total_timesteps=5000000, log_interval=1, callback=checkpoint_callback)
+
         model.save('%s' % PATH)
+        print(policy_kwargs)
+    else:
 
+        observation,_=env.reset()
+        while True:
 
-    atexit.register(save_on_exit)
+            action,values=model.predict(observation)
+            observation, rewards, terminate, trunkcate, info = env.step(action)
+            pygame.time.wait(50)
+            if terminate:
+                env.reset()
 
-    model.learn(total_timesteps=5000000, log_interval=1, callback=checkpoint_callback)
-
-    model.save('%s' % PATH)
-    print(policy_kwargs)
