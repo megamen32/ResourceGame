@@ -6,11 +6,12 @@ class Agent:
     def __init__(self, x, y,env):
         self.x = x
         self.y = y
-        self.resources = 10.0  # Начальное количество ресурсов (яблоко)
+
         self.max_health=3.0
         self.health = self.max_health  # Здоровье
         self.attack_radius=5
         self.max_resources=10
+        self.resources = self.max_resources  # Начальное количество ресурсов (яблоко)
         ###cache
         from goldenruleenv import GoldenRuleEnv
         self.env:GoldenRuleEnv=env
@@ -23,15 +24,17 @@ class Agent:
         moved=False
         if self.resources<=0:
             return
-        if self.x+dx<self.env.world_size and self.x+dx>0:
+        if self.x+dx<self.env.world_size and self.x+dx>0 and abs(dx)>0:
             self.x += dx
             moved=True
-        if self.y+dy<self.env.world_size and self.y+dy>0:
+        if self.y+dy<self.env.world_size and self.y+dy>0 and abs(dy)>0:
             self.y += dy
             moved=True
         if moved:
             self.resources -= abs(dx) / 50  # Расход ресурсов за движение
             self.resources -= abs(dy) / 50
+        else:
+            self.resources -= self.env.starvation
 
     # Метод для атаки другого агента
     def attack(self, other):

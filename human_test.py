@@ -53,8 +53,10 @@ env = gymnasium.make('GoldenRuleEnv')
 observation,_ = env.reset()
 human_input = None
 active_keys = set()
-
+cum_reward=0
+step=0
 while True:
+    step+=1
     new_human_input, active_keys = handle_human_input(env, active_keys)
     if new_human_input == "QUIT":
         break
@@ -64,7 +66,11 @@ while True:
     nulls_actions = [np.random.randint(-1,2,4) for _ in range(env.init_agents-1)]
     actions = [action, *nulls_actions]
     observation, reward, done, truncated, info = env.step(actions)
+    cum_reward+=reward[0]
     env.render()
-
+    if step%50==0:
+        print('cummulitive_reward',cum_reward,'reward',reward[0],'state\n',observation[0])
     if done or truncated:
         env.reset()
+        cum_reward = 0
+

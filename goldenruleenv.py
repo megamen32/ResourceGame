@@ -21,11 +21,12 @@ class GoldenRuleEnv(gym.Env):
     def __init__(self, world_size=500, vision_radius=50,render_mode='human'):
         super(GoldenRuleEnv, self).__init__()
 
+        self.starvation = 0.005
         self.world_size = world_size  # Размер мира
         self.vision_radius = vision_radius  # Радиус видимости агента
         self.agents = []  # Список агентов
         self.resources = []  # Список ресурсов
-        self.spawn_rate=0.001
+        self.spawn_rate=0.1
         self.init_agents=10
         self.init_resourses=20
 
@@ -107,12 +108,14 @@ class GoldenRuleEnv(gym.Env):
             # Двигаем агента
             agent.move(dx, dy)
 
+
             nearby_food=self._find_nearest_food(agent)
             if nearby_food and agent.resources<agent.max_resources:
                 agent.resources+=nearby_food.amount
+                agent.resources=min(agent.max_resources,agent.resources)
                 self.resources.remove(nearby_food)
 
-            if eat and agent.resources>0 and agent.health<agent.max_health:
+            if eat and agent.resources>=1 and agent.health<agent.max_health:
                 agent.resources-=1
                 agent.health+=1
 
@@ -145,13 +148,15 @@ class GoldenRuleEnv(gym.Env):
 
        # Отображение ресурсов (яблок) зелеными кругами
        for res in self.resources:
-           pygame.draw.circle(self.screen, (0, 255, 0), (res.x, res.y), 5)
+           pygame.draw.circle(self.screen, (0, 255, 0), (res.x, res.y), 2)
 
        # Отображение агентов красными кругами
        for agent in self.agents:
-           pygame.draw.circle(self.screen, (255, 0, 0), (agent.x, agent.y), 5)
+           pygame.draw.circle(self.screen, (max(0,255*agent.resources/agent.max_resources), 0, 0), (agent.x, agent.y), agent.health)
 
+       pygame.event.pump()
        pygame.display.flip()  # Обновление экрана
+
 
     def close(self):
       pygame.quit()
@@ -170,7 +175,7 @@ class GoldenRuleEnv(gym.Env):
             nearest_food = None
             for food in self.resources:
                 distance = (food.x - agent.x) ** 2 + (food.y - agent.y) ** 2
-                if distance < min_distance and distance <= 5:  # Предположим, радиус атаки = радиусу видимости
+                if distance < min_distance and distance <= 5**2:  # Предположим, радиус атаки = радиусу видимости
                     min_distance = distance
                     nearest_food = food
             return nearest_food
@@ -179,10 +184,14 @@ class GoldenRuleEnv(gym.Env):
         # Награда или штраф на основе действий и состояния агента
         # Пример:
         reward = 0
-        if agent.prev_resources > agent.resources:
+        if agent.prev_resources < agent.resources:
             reward += 1
+        elif agent.prev_resources > agent.resources:
+            reward-=agent.resources-agent.prev_resources
+        agent.prev_resources=agent.resources
         if agent.health<agent.prev_health:
             reward-=2
+        agent.prev_health=agent.prev_health
         if agent.health==0:
             reward-=10
         if agent.resources==0:
