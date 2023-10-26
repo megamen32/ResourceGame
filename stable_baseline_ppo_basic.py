@@ -32,7 +32,7 @@ if __name__ == '__main__':
         model = PPO("MlpPolicy", env, verbose=1, policy_kwargs=policy_kwargs)
 
     # Обучение модели
-    model.learn(total_timesteps=100000)
+    model.learn(total_timesteps=500000)
 
     model.save('%s' % PATH)
 

@@ -38,12 +38,10 @@ class Agent:
 
     # Метод для атаки другого агента
     def attack(self, other):
-        if self.resources >= 10/50:
-            other.health -= 1
-            self.resources -= 10/50
-            # Если здоровье другого агента становится <= 0, забираем его ресурсы
-            if other.health <= 0:
-                self.env.resources.append(Resource(other.x,other.y, other.resources * 0.5))
+        other.health -= 1
+        # Если здоровье другого агента становится <= 0, забираем его ресурсы
+        if other.health <= 0:
+            self.env.resources.append(Resource(other.x,other.y, other.resources ))
     def get_visible_state(agent):
         return [agent.x, agent.y, agent.health]
 
