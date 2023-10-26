@@ -19,12 +19,13 @@ class Agent:
         self.env:GoldenRuleEnv=env
         self.is_attacking = False
         self.attack_idle=0
-        self.time_between_attacks=5
+        self.time_between_attacks=20
         ###cache for states
         self.prev_health=self.health
         self.prev_resources=self.resources
         self.previous_food_distance= float('inf')
         self.normal_health=random.uniform(0.2,1)
+        self.is_eating=0
 
 
 

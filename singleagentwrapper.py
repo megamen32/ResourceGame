@@ -35,6 +35,8 @@ class SingleAgentWrapper(gym.Wrapper):
 
         if agent.health < agent.max_health *agent.normal_health and agent.resources>=2:
             eat = 1
+        if agent.resources>agent.max_resources*0.8 and agent.health<agent.max_health:
+            eat=1
 
         attack = 0
         for neighbor in neighbors:
@@ -45,13 +47,15 @@ class SingleAgentWrapper(gym.Wrapper):
         # Находить ближайший ресурс
         nearest_resource = None
         min_distance_to_resource =30
-        for resource in self.env.resources:
+        resourses = [other for other in self.env.resources if  np.linalg.norm(
+            np.array([agent.x, agent.y]) - np.array([other.x, other.y])) <= min_distance_to_resource]
+        for resource in resourses:
             distance = np.linalg.norm(np.array([agent.x, agent.y]) - np.array([resource.x, resource.y]))
             if distance < min_distance_to_resource:
                 min_distance_to_resource = distance
                 nearest_resource = resource
 
-        if agent.resources < agent.max_resources / 2 and nearest_resource:
+        if  nearest_resource and (agent.resources < agent.max_resources / 2):
             # Если у агента меньше половины ресурсов, двигаться к ближайшему ресурсу
             target_direction = np.array([nearest_resource.x, nearest_resource.y]) - np.array([agent.x, agent.y])
         elif neighbors :
@@ -62,6 +66,7 @@ class SingleAgentWrapper(gym.Wrapper):
                 target_direction=-target_direction
         elif nearest_resource:
             target_direction = np.array([nearest_resource.x, nearest_resource.y]) - np.array([agent.x, agent.y])
+
         else:
             noise = self.noiese[agent]()
 

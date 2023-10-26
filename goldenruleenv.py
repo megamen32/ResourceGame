@@ -122,10 +122,12 @@ class GoldenRuleEnv(gym.Env):
 
 
             nearby_food=self._find_nearest_food(agent)
+            agent.is_eating -=1
             if nearby_food and agent.resources<agent.max_resources:
                 agent.resources+=nearby_food.amount
                 agent.resources=min(agent.max_resources,agent.resources)
                 self.resources.remove(nearby_food)
+                agent.is_eating=2
 
             if eat and agent.resources>=1 and agent.health<agent.max_health:
                 agent.resources-=1
@@ -253,7 +255,7 @@ class GoldenRuleEnv(gym.Env):
             reward -= (agent.prev_resources - agent.resources) * 2
             if new_distance < previous_distance:
                 reward += 0.2  # Награда за приближение к ресурсу
-            else:
+            elif  agent.is_eating<=0:
                 reward-=0.3
 
         agent.prev_resources = agent.resources
