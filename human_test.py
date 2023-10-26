@@ -1,4 +1,5 @@
 import gymnasium
+import numpy as np
 import pygame
 import goldenruleenv
 
@@ -60,10 +61,10 @@ while True:
 
 
     action = action_from_input(new_human_input)
-    nulls_actions = [[0,0,0,0] for _ in range(env.init_agents-1)]
+    nulls_actions = [np.random.randint(-1,2,4) for _ in range(env.init_agents-1)]
     actions = [action, *nulls_actions]
     observation, reward, done, truncated, info = env.step(actions)
     env.render()
 
-    if done:
-        break
+    if done or truncated:
+        env.reset()

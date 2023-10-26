@@ -102,7 +102,8 @@ class GoldenRuleEnv(gym.Env):
         for i, agent in enumerate(self.agents):
             action = actions[i]
             dx, dy, attack,eat = action  # Разбираем действие на компоненты
-
+            attack=attack==1
+            eat=eat==1
             # Двигаем агента
             agent.move(dx, dy)
 
@@ -133,7 +134,7 @@ class GoldenRuleEnv(gym.Env):
 
         observations = self._get_observation()
         done = len(self.agents)<=1  # условие завершения эпизода
-        trunctated=False
+        trunctated=max(agent.resources for agent in self.agents)<=0
         info = {}  # дополнительная информация
         self.render()
         return observations, rewards, done,trunctated, info
