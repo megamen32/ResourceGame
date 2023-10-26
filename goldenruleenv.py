@@ -160,8 +160,14 @@ class GoldenRuleEnv(gym.Env):
            pygame.draw.circle(self.screen, (0, 255, 0), (res.x, res.y), 2*res.amount)
 
        # Отображение агентов красными кругами
-       for i,agent in enumerate(self.agents):
-           pygame.draw.circle(self.screen, (max(0,255*agent.resources/agent.max_resources), 0, 0 if i!=0 else max(0,255* agent.resources / agent.max_resources) ), (agent.x, agent.y), agent.health)
+       for i, agent in enumerate(self.agents):
+            color = (max(0, 255 * agent.resources / agent.max_resources), 0, 0 if i != 0 else 255)
+            if i == 0:
+                # Рисуем квадрат для нулевого агента
+                size = min(10 * agent.health,agent.max_health)
+                pygame.draw.rect(self.screen, color, (agent.x - size // 2, agent.y - size // 2, size, size))
+            else:
+                pygame.draw.circle(self.screen, color, (agent.x, agent.y), agent.health)
 
        pygame.event.pump()
        pygame.display.flip()  # Обновление экрана
@@ -195,8 +201,8 @@ class GoldenRuleEnv(gym.Env):
         reward = 0
         if agent.prev_resources < agent.resources:
             reward += 1
-        elif agent.prev_resources > agent.resources:
-            reward-=agent.prev_resources-agent.resources
+        elif agent.prev_resources+0.5 > agent.resources:
+            reward-=(agent.prev_resources-agent.resources)*2
         agent.prev_resources=agent.resources
         if agent.health<agent.prev_health:
             reward-=2
@@ -204,7 +210,7 @@ class GoldenRuleEnv(gym.Env):
         if agent.health<=0:
             reward-=100
         if agent.resources<=0:
-            reward-=0.5
+            reward-=100
         return reward
 
     def _update_world(self):
