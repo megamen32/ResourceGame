@@ -13,7 +13,8 @@ class Agent:
         self.max_resources=10
 
         ##cache
-        from goldenruleenv import GoldenRuleEnv
+
+        from zoo.goldenruleenv import GoldenRuleEnv
         self.env: GoldenRuleEnv = env
         #reseting
         self.reset()

@@ -2,3 +2,6 @@ gymnasium
 pygame
 numpy
 stable_baselines3
+pettingzoo
+torch
+supersuit

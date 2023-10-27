@@ -8,6 +8,7 @@ Author: Elliot (https://github.com/elliottower)
 """
 from __future__ import annotations
 
+import atexit
 import glob
 import os
 import time
@@ -21,23 +22,41 @@ import goldenruleenv
 
 def train(env_fn, steps: int = 10_000, seed: int | None = 0, **env_kwargs):
     # Train a single model to play as each agent in an AEC environment
-    env = env_fn.parallel_env(render_mode='human',**env_kwargs)
-    #env = ss.black_death_v3(env)
+    env = env_fn.parallel_env(**env_kwargs)
+    env = ss.black_death_v3(env)
 
     env.reset(seed=seed)
 
     print(f"Starting training on {str(env.metadata['name'])}.")
 
     env = ss.pettingzoo_env_to_vec_env_v1(env)
-    env = ss.concat_vec_envs_v1(env, 1, num_cpus=1, base_class="stable_baselines3")
+    env = ss.concat_vec_envs_v1(env, 8, num_cpus=8, base_class="stable_baselines3")
 
-    # Use a CNN policy if the observation space is visual
-    model = PPO(
-        MlpPolicy,
-        env,
-        verbose=3,
-        batch_size=256,
-    )
+    # Try loading the latest saved model
+    try:
+        latest_policy = max(
+            glob.glob(f"{env.unwrapped.metadata['name']}*.zip"), key=os.path.getctime
+        )
+        model = PPO.load(latest_policy, env)
+        print(f"Loaded model from {latest_policy}")
+    except ValueError:
+        # Use a CNN policy if the observation space is visual
+        model = PPO(
+            MlpPolicy,
+            env,
+            verbose=3,
+            batch_size=256,
+            normalize_advantage=True,
+            policy_kwargs={'net_arch': [64, 64, 64]}
+        )
+        print("Initialized a new model")
+
+    def save_model_on_exit():
+        print("Saving model before exiting...")
+        model.save(f"{env.unwrapped.metadata.get('name')}_{time.strftime('%Y%m%d-%H%M%S')}")
+
+    # Register the save function to be called on exit
+    atexit.register(save_model_on_exit)
 
     model.learn(total_timesteps=steps)
 
@@ -109,7 +128,8 @@ if __name__ == "__main__":
 
 
     # Train a model (takes ~5 minutes on a laptop CPU)
-    train(env_fn, steps=5_000_000, seed=0)
+
+    train(env_fn, steps=50_000_000, seed=0)
 
     # Watch 2 games (takes ~10 seconds on a laptop CPU)
     eval(env_fn, num_games=20, render_mode="human")
