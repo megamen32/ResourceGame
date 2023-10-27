@@ -1,8 +1,6 @@
 import gymnasium
-import numpy as np
 import pygame
-import goldenruleenv
-from singleagentwrapper import SingleAgentWrapper
+from gym.singleagentwrapper import SingleAgentWrapper
 
 
 def handle_human_input(env, active_keys):

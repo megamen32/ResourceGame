@@ -1,3 +1,4 @@
 gymnasium
 pygame
 numpy
+stable_baselines3
