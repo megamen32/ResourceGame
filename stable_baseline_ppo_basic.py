@@ -22,7 +22,7 @@ def load_latest_checkpoint(model_name, env, policy_kwargs):
     Загрузите последний чекпоинт или сохраненную модель, в зависимости от того, какой из них новее.
     Если не найдено ни одного, создайте новую модель.
     """
-    list_of_files = glob.glob(f'./checkpoints/rl_model{policy_kwargs}.zip')
+    list_of_files = glob.glob(f'./checkpoints/rl_model{policy_kwargs.items()}.zip')
     model_path = f'{model_name}.zip'
     model_path_exit = f'{model_name}_exit_save.zip'
 
@@ -55,17 +55,17 @@ def make_env():
 Train=True
 
 
-def main(policy_kwargs=None,sleep=0):
+def main(policy_kwargs=None,sleep=0,model=None):
     if policy_kwargs is None:
         policy_kwargs = dict(
             net_arch=[256, 256, 256]  # два скрытых слоя по 64 нейронов
         )
     if sleep>0:
         time.sleep(sleep)
-    PATH = f'basic_ppo_{policy_kwargs["net_arch"]}'
-    env = SubprocVecEnv([make_env() for _ in range(num_cpu)]) if Train else SingleAgentWrapper(
-        gymnasium.make('GoldenRuleEnv'))
-    model = load_latest_checkpoint(PATH, env,policy_kwargs)
+    PATH = f'basic_ppo_{policy_kwargs.items()}'
+    env = SubprocVecEnv([make_env() for _ in range(num_cpu)]) if Train else make_env()
+    if not model:
+        model = load_latest_checkpoint(PATH, env,policy_kwargs)
     if Train:
         # Сохраняется каждые 10 минут
         save_freq = 10000  # Предположим, что каждый шаг занимает 2 секунды на одном ядре
@@ -79,7 +79,7 @@ def main(policy_kwargs=None,sleep=0):
 
         atexit.register(save_on_exit)
 
-        model.learn(total_timesteps=50090000, log_interval=5, callback=checkpoint_callback)
+        model.learn(total_timesteps=50090000, log_interval=1, callback=checkpoint_callback)
 
         model.save('%s' % PATH)
         print(policy_kwargs)

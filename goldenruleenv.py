@@ -28,7 +28,7 @@ class GoldenRuleEnv(gym.Env):
         self.vision_radius = vision_radius  # Радиус видимости агента
         self.agents = []  # Список агентов
         self.resources = []  # Список ресурсов
-        self.spawn_rate=0.1
+        self.spawn_rate=0.01
         self.init_agents=10
         self.init_resourses=20
 
@@ -36,7 +36,7 @@ class GoldenRuleEnv(gym.Env):
         self.action_space = MultiDiscrete([3, 3, 2, 2])
 
         # Пространство наблюдений: пока что просто координаты всех агентов и ресурсов в радиусе видимости
-        self.observation_space = spaces.Box(low=-self.world_size, high=self.world_size, shape=(32, ), dtype=np.float64)
+        self.observation_space = spaces.Box(low=-self.world_size, high=self.world_size, shape=(33, ), dtype=np.float64)
         self.reset()
         #if render_mode=='human':
         pygame.init()
@@ -56,7 +56,7 @@ class GoldenRuleEnv(gym.Env):
         max_nearby_agents = 5
 
         max_nearby_resources = 5
-        agent_data_length = 2
+        agent_data_length = 3
         nearby_agent_data_length = 3
         nearby_resource_data_length = 3
 
@@ -87,7 +87,7 @@ class GoldenRuleEnv(gym.Env):
                 nearby_resources.append([0, 0,0])
 
             # Поскольку мы теперь используем относительные координаты, начальные координаты агента будут [0, 0]
-            observation = [agent.health, agent.resources]
+            observation = [agent.health, agent.resources,agent.attack_idle]
             for other in nearby_agents:
                 observation.extend(other)
             for res in nearby_resources:
@@ -167,8 +167,8 @@ class GoldenRuleEnv(gym.Env):
             truncate = [False for _ in range((self.init_agents))]
             observations = [[0 for i in range(self.observation_space.shape[0])] for _ in range((self.init_agents))]
             rewards = [0 for _ in range((self.init_agents))]
-        if len(self.agents)==1:
-            dones = [True for _ in range((self.init_agents))]
+        if len(self.agents)==2:
+            truncate = [True for _ in range((self.init_agents))]
         return observations, rewards, dones,truncate, info
 
 
@@ -249,7 +249,7 @@ class GoldenRuleEnv(gym.Env):
 
 
         agent.previous_food_distance=new_distance
-        if agent.prev_resources < agent.resources:
+        if agent.is_eating==2:
             reward += 1
         elif agent.prev_resources > agent.resources:
             reward -= (agent.prev_resources - agent.resources) * 2
