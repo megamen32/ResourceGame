@@ -250,13 +250,13 @@ class GoldenRuleEnv(gym.Env):
 
         agent.previous_food_distance=new_distance
         if agent.prev_resources < agent.resources:
-            reward += 5*(agent.resources- agent.prev_resources)
+            reward += 1
         elif agent.prev_resources > agent.resources:
             reward -= (agent.prev_resources - agent.resources) * 2
-            if new_distance < previous_distance:
-                reward += 0.2  # Награда за приближение к ресурсу
-            elif  agent.is_eating<=0:
-                reward-=0.3
+            #if new_distance < previous_distance:
+                #reward += 0.2  # Награда за приближение к ресурсу
+            #elif  agent.is_eating<=0:
+                #reward-=0.3
 
         agent.prev_resources = agent.resources
 

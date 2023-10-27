@@ -79,7 +79,7 @@ def main(policy_kwargs=None,sleep=0):
 
         atexit.register(save_on_exit)
 
-        model.learn(total_timesteps=5000000, log_interval=1, callback=checkpoint_callback)
+        model.learn(total_timesteps=50090000, log_interval=5, callback=checkpoint_callback)
 
         model.save('%s' % PATH)
         print(policy_kwargs)
